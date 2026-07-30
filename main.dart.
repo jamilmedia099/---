@@ -1,0 +1,779 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const AlJameelAcademyApp());
+}
+
+class AlJameelAcademyApp extends StatelessWidget {
+  const AlJameelAcademyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Al-Jameel Academy',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primaryColor: const Color(0xFF00897B),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00897B)),
+        useMaterial3: true,
+      ),
+      home: const LoginScreen(),
+    );
+  }
+}
+
+// ==================== ১. ইন-মেমোরি ব্যাকএন্ড ও রোল ডাটা ====================
+class AppState {
+  // বর্তমানে লগইন থাকা ইউজারের তথ্য
+  static Map<String, String> currentUser = {
+    'name': 'হাফেজ মো: জামিল',
+    'phone': '01700000000',
+    'role': 'Director', // 'Director' বা 'Student'
+  };
+
+  static List<Map<String, dynamic>> posts = [
+    {
+      'author': 'হাফেজ মো: জামিল',
+      'role': 'Director',
+      'time': '১০ মিনিট আগে',
+      'content': 'আসসালামু আলাইকুম। আল-জামিল একাডেমির নতুন সেশনের ক্যালিগ্রাফি কোর্স শুরু হয়েছে!',
+      'likes': 18,
+      'isLiked': false,
+      'comments': <String>['মাশাআল্লাহ স্যার, অনেক শুভকামনা!'],
+    },
+    {
+      'author': 'মো: আব্দুল্লাহ',
+      'role': 'Student',
+      'time': '১ ঘণ্টা আগে',
+      'content': 'আলহামদুলিল্লাহ, ৩য় ক্লাসের পর আমার হাতের লেখার উন্নতি হয়েছে। সবাই দোয়া করবেন।',
+      'likes': 9,
+      'isLiked': false,
+      'comments': <String>['অনেক সুন্দর হয়েছে ভাই।'],
+    },
+  ];
+
+  static void addPost(String content) {
+    posts.insert(0, {
+      'author': currentUser['name']!,
+      'role': currentUser['role']!,
+      'time': 'এইমাত্র',
+      'content': content,
+      'likes': 0,
+      'isLiked': false,
+      'comments': <String>[],
+    });
+  }
+
+  static void toggleLike(int index) {
+    if (posts[index]['isLiked']) {
+      posts[index]['likes']--;
+      posts[index]['isLiked'] = false;
+    } else {
+      posts[index]['likes']++;
+      posts[index]['isLiked'] = true;
+    }
+  }
+
+  static void addComment(int index, String comment) {
+    (posts[index]['comments'] as List<String>).add(comment);
+  }
+}
+
+// ==================== ২. মোবাইল নম্বর দিয়ে লগইন স্ক্রিন ====================
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  bool _isDirector = false;
+
+  void _login() {
+    String phone = _phoneController.text.trim();
+    String name = _nameController.text.trim();
+
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('অনুগ্রহ করে সঠিক মোবাইল নম্বর দিন!')),
+      );
+      return;
+    }
+
+    // তথ্য সেভ করা
+    AppState.currentUser['phone'] = phone;
+    AppState.currentUser['name'] = name.isEmpty ? 'শিক্ষার্থী ইউজার' : name;
+    AppState.currentUser['role'] = _isDirector ? 'Director' : 'Student';
+
+    // মূল ড্যাশবোর্ডে নিয়ে যাওয়া
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainDashboard()),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              const Icon(Icons.school_rounded, size: 80, color: Color(0xFF00897B)),
+              const SizedBox(height: 12),
+              const Text(
+                'Al-Jameel Academy',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+              const Text(
+                'এডুকেশনাল সোশ্যাল নেটওয়ার্ক',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 40),
+
+              // নাম ইনপুট
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'আপনার নাম',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // মোবাইল নম্বর ইনপুট
+              TextField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'মোবাইল নম্বর',
+                  hintText: '017XXXXXXXX',
+                  prefixIcon: const Icon(Icons.phone_android_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ডিরেক্টর/পরিচালক হিসেবে প্রবেশের সুইচ
+              CheckboxListTile(
+                activeColor: const Color(0xFF00897B),
+                title: const Text('আমি একাডেমি পরিচালক (Admin)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                subtitle: const Text('পরিচালক ব্যাজ ও অ্যাডমিন অপশন অন হবে', style: TextStyle(fontSize: 11)),
+                value: _isDirector,
+                onChanged: (val) {
+                  setState(() {
+                    _isDirector = val ?? false;
+                    if (_isDirector && _nameController.text.isEmpty) {
+                      _nameController.text = 'হাফেজ মো: জামিল';
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 20),
+
+              // লগইন বাটন
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00897B),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                  ),
+                  onPressed: _login,
+                  child: const Text('নম্বর দিয়ে প্রবেশ করুন', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== ৩. মূল ড্যাশবোর্ড ====================
+class MainDashboard extends StatefulWidget {
+  const MainDashboard({super.key});
+
+  @override
+  State<MainDashboard> createState() => _MainDashboardState();
+}
+
+class _MainDashboardState extends State<MainDashboard> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    const FeedTab(),
+    const ShortsTab(),
+    const ChatTab(),
+    const CoursesTab(),
+    const ProfileTab(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        selectedItemColor: const Color(0xFF00897B),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dynamic_feed_rounded), label: 'ফিড'),
+          BottomNavigationBarItem(icon: Icon(Icons.slow_motion_video_rounded), label: 'শর্টস'),
+          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_rounded), label: 'মেসেজ'),
+          BottomNavigationBarItem(icon: Icon(Icons.book_rounded), label: 'কোর্স'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'প্রোফাইল'),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== ৪. ফিড (সবাই পোস্ট করতে পারবে) ====================
+class FeedTab extends StatefulWidget {
+  const FeedTab({super.key});
+
+  @override
+  State<FeedTab> createState() => _FeedTabState();
+}
+
+class _FeedTabState extends State<FeedTab> {
+  final TextEditingController _postController = TextEditingController();
+
+  void _showCreatePostModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('নতুন পোস্ট তৈরি করুন', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _postController,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                hintText: 'আপনার মনে কী আছে? নতুন হাতের লেখা শেয়ার করুন...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                IconButton(icon: const Icon(Icons.photo_library, color: Colors.green), onPressed: () {}),
+                IconButton(icon: const Icon(Icons.videocam, color: Colors.red), onPressed: () {}),
+                const Spacer(),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00897B)),
+                  onPressed: () {
+                    if (_postController.text.trim().isNotEmpty) {
+                      setState(() {
+                        AppState.addPost(_postController.text.trim());
+                      });
+                      _postController.clear();
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('পোস্ট করুন', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCommentDialog(int index) {
+    final TextEditingController commentController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('কমেন্ট করুন', style: TextStyle(fontSize: 16)),
+        content: TextField(
+          controller: commentController,
+          decoration: const InputDecoration(hintText: 'আপনার মন্তব্য লিখুন...', border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00897B)),
+            onPressed: () {
+              if (commentController.text.trim().isNotEmpty) {
+                setState(() {
+                  AppState.addComment(index, commentController.text.trim());
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('পাঠান', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('আল-জামিল সোশ্যাল ফিড', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF00897B),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Card(
+              margin: const EdgeInsets.all(12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: const CircleAvatar(backgroundColor: Color(0xFF00897B), child: Icon(Icons.person, color: Colors.white)),
+                title: const Text('নতুন কিছু শেয়ার করুন...', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                trailing: const Icon(Icons.add_photo_alternate_rounded, color: Color(0xFF00897B)),
+                onTap: () => _showCreatePostModal(context),
+              ),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: AppState.posts.length,
+              itemBuilder: (context, index) {
+                final post = AppState.posts[index];
+                return _buildPostCard(index, post);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostCard(int index, Map<String, dynamic> post) {
+    List comments = post['comments'] ?? [];
+    bool isDirector = post['role'] == 'Director';
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(0xFF00897B).withOpacity(0.2),
+                  child: Text(post['author'][0], style: const TextStyle(color: Color(0xFF00897B), fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(post['author'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(width: 6),
+                        if (isDirector)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: const Color(0xFF00897B), borderRadius: BorderRadius.circular(10)),
+                            child: const Text('🔰 পরিচালক', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                          ),
+                      ],
+                    ),
+                    Text(post['time'], style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  ],
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF00897B), size: 20),
+                  tooltip: 'পার্সোনাল মেসেজ',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ChatRoomScreen(chatTitle: post['author'])),
+                    );
+                  },
+                )
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(post['content'], style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 10),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                TextButton.icon(
+                  icon: Icon(post['isLiked'] ? Icons.thumb_up : Icons.thumb_up_outlined, size: 18, color: post['isLiked'] ? const Color(0xFF00897B) : Colors.grey),
+                  label: Text('${post['likes']} লাইক', style: TextStyle(color: post['isLiked'] ? const Color(0xFF00897B) : Colors.grey)),
+                  onPressed: () {
+                    setState(() { AppState.toggleLike(index); });
+                  },
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.mode_comment_outlined, size: 18, color: Colors.grey),
+                  label: Text('${comments.length} কমেন্ট', style: const TextStyle(color: Colors.grey)),
+                  onPressed: () => _showCommentDialog(index),
+                ),
+              ],
+            ),
+            if (comments.isNotEmpty) ...[
+              const Divider(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: comments.map((c) => Padding(padding: const EdgeInsets.only(top: 2.0), child: Text('💬 $c', style: const TextStyle(fontSize: 12)))).toList(),
+              ),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== ৫. শর্টস ও ভিডিও সেকশন ====================
+class ShortsTab extends StatelessWidget {
+  const ShortsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return PageView.builder(
+      scrollDirection: Axis.vertical,
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return Container(
+          color: Colors.black,
+          child: Stack(
+            children: [
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.play_circle_fill_rounded, size: 80, color: Colors.white.withOpacity(0.8)),
+                    const SizedBox(height: 12),
+                    Text('হাতের লেখা টিউটোরিয়াল শর্টস #${index + 1}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 40,
+                right: 16,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00897B)),
+                  icon: const Icon(Icons.video_call_rounded, color: Colors.white),
+                  label: const Text('ভিডিও ছাড়ুন', style: TextStyle(color: Colors.white, fontSize: 12)),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('গ্যালারি থেকে নতুন টিউটোরিয়াল ভিডিও সিলেক্ট করুন...')),
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                right: 16,
+                bottom: 80,
+                child: Column(
+                  children: [
+                    const Icon(Icons.favorite, color: Colors.red, size: 30),
+                    const Text('১২.৫K', style: TextStyle(color: Colors.white, fontSize: 11)),
+                    const SizedBox(height: 16),
+                    const Icon(Icons.comment, color: Colors.white, size: 30),
+                    const Text('৩৪৫', style: TextStyle(color: Colors.white, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ==================== ৬. পার্সোনাল চ্যাট ও অডিও-ভিডিও কল ====================
+class ChatTab extends StatelessWidget {
+  const ChatTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('পার্সোনাল ইনবক্স ও মেসেজ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF00897B),
+      ),
+      body: ListView(
+        children: [
+          _chatTile(context, 'হাফেজ মো: জামিল (পরিচালক)', 'আসসালামু আলাইকুম, কোনো সমস্যা হলে জানাবেন।', '১০:১৫ AM', true),
+          _chatTile(context, 'মো: আব্দুল্লাহ', 'স্যার, আজকের এইচডব্লিউ জমা দিয়েছি।', 'গতকাল', false),
+          _chatTile(context, 'বাংলা হাতের লেখা গ্রুপ (ব্যাচ-১)', 'নতুন লাইভ ক্লাসের লিঙ্ক প্রদান করা হলো।', '২৫ জুলাই', false),
+        ],
+      ),
+    );
+  }
+
+  Widget _chatTile(BuildContext context, String title, String subtitle, String time, bool isOnline) {
+    return ListTile(
+      leading: Stack(
+        children: [
+          CircleAvatar(
+            backgroundColor: const Color(0xFF00897B).withOpacity(0.2),
+            child: Text(title[0], style: const TextStyle(color: Color(0xFF00897B), fontWeight: FontWeight.bold)),
+          ),
+          if (isOnline)
+            Positioned(
+              right: 0, bottom: 0,
+              child: Container(width: 12, height: 12, decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2))),
+            ),
+        ],
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+      subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ChatRoomScreen(chatTitle: title)));
+      },
+    );
+  }
+}
+
+class ChatRoomScreen extends StatefulWidget {
+  final String chatTitle;
+  const ChatRoomScreen({super.key, required this.chatTitle});
+
+  @override
+  State<ChatRoomScreen> createState() => _ChatRoomScreenState();
+}
+
+class _ChatRoomScreenState extends State<ChatRoomScreen> {
+  final List<String> _messages = ['আসসালামু আলাইকুম!'];
+  final TextEditingController _messageController = TextEditingController();
+
+  void _sendMessage() {
+    if (_messageController.text.trim().isNotEmpty) {
+      setState(() {
+        _messages.add(_messageController.text.trim());
+      });
+      _messageController.clear();
+    }
+  }
+
+  void _triggerCall(String type) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$type কলিং...'),
+        content: Text('${widget.chatTitle}-এর কাছে $type কলের সংকেত পাঠানো হচ্ছে।'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('কল কাটুন', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.chatTitle, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+        backgroundColor: const Color(0xFF00897B),
+        actions: [
+          IconButton(icon: const Icon(Icons.call, color: Colors.white), onPressed: () => _triggerCall('অডিও')),
+          IconButton(icon: const Icon(Icons.videocam, color: Colors.white), onPressed: () => _triggerCall('ভিডিও')),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                bool isMe = index % 2 != 0;
+                return Align(
+                  alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isMe ? const Color(0xFF00897B) : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(_messages[index], style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 14)),
+                  ),
+                );
+              },
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'মেসেজ লিখুন...',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send_rounded, color: Color(0xFF00897B)),
+                  onPressed: _sendMessage,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== ৭. কোর্স ও প্রোফাইল সেকশন ====================
+class CoursesTab extends StatelessWidget {
+  const CoursesTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('সকল কোর্সসমূহ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF00897B),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildCourseCard('বাংলা হাতের লেখা সুন্দর করার কোর্স', '৩ মাস মেয়াদী - ৩০টি ক্লাস', '৳ ১,৫০০', Colors.teal),
+          _buildCourseCard('আরবি ক্যালিগ্রাফি ও আর্ট কোর্স', '৩ মাস মেয়াদী - ২৫টি ক্লাস', '৳ ২,০০০', Colors.deepOrange),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCourseCard(String title, String duration, String price, Color color) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Chip(label: Text(price, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), backgroundColor: color),
+                Text(duration, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: color),
+                onPressed: () {},
+                child: const Text('কোর্সে ভর্তি হোন', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProfileTab extends StatelessWidget {
+  const ProfileTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    bool isDirector = AppState.currentUser['role'] == 'Director';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('আমার প্রোফাইল', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF00897B),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const Center(
+              child: CircleAvatar(
+                radius: 45,
+                backgroundColor: Color(0xFF00897B),
+                child: Icon(Icons.person, size: 55, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(AppState.currentUser['name']!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 6),
+                if (isDirector)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: const Color(0xFF00897B), borderRadius: BorderRadius.circular(12)),
+                    child: const Text('🔰 পরিচালক', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+              ],
+            ),
+            Text('ফোন: ${AppState.currentUser['phone']!}', style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.book, color: Color(0xFF00897B)),
+              title: const Text('আমার কোর্স'),
+              trailing: const Text('২টি', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.post_add, color: Color(0xFF00897B)),
+              title: const Text('আমার পোস্টসমূহ'),
+              trailing: Text('${AppState.posts.length}টি', style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('লগআউট করুন', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
